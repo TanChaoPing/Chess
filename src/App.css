@@ -1,0 +1,14 @@
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.chess-cell {
+  width: 75px;
+  height: 75px;
+  font-size: 30px;
+  color: rgb(67, 64, 64);
+  vertical-align: top;
+}

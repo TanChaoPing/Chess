@@ -5,12 +5,82 @@
   text-align: center;
 }
 
+#bg-image {
+  background-image: linear-gradient(
+      rgba(255, 255, 255, 0.01),
+      rgba(255, 255, 255, 0.01)
+    ),
+    url('/wood_bg.jpg');
+  background-repeat: no-repeat;
+}
+
+#line {
+  border: 3px solid rgb(82, 44, 7);
+}
+
+#turn-container {
+  background-color: white;
+  width: 350px;
+  display: flex;
+  margin: auto;
+  justify-content: center;
+  border: 2px solid black;
+  border-radius: 30px;
+}
+
+#turn-display {
+  font-family: din-round,sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.start-game {
+  background-color: #FFFFFF;
+  border: 1px solid #222222;
+  border-radius: 8px;
+  box-sizing: border-box;
+  color: #222222;
+  cursor: pointer;
+  display: inline-block;
+  font-family: Circular,-apple-system,BlinkMacSystemFont,Roboto,"Helvetica Neue",sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 20px;
+  margin: 0;
+  outline: none;
+  padding: 13px 23px;
+  position: relative;
+  text-align: center;
+  text-decoration: none;
+  touch-action: manipulation;
+  transition: box-shadow .2s,-ms-transform .1s,-webkit-transform .1s,transform .1s;
+  user-select: none;
+  -webkit-user-select: none;
+  width: auto;
+}
+
+.start-game:focus-visible {
+  box-shadow: #222222 0 0 0 2px, rgba(255, 255, 255, 0.8) 0 0 0 4px;
+  transition: box-shadow .2s;
+}
+
+.start-game:active {
+  background-color: #F7F7F7;
+  border-color: #000000;
+  transform: scale(.96);
+}
+
 .chess-cell {
   width: 75px;
   height: 75px;
   font-size: 30px;
   color: rgb(67, 64, 64);
   vertical-align: top;
+  border: 3px solid black;
+  margin-left: -3px;
+  margin-top: -3px;
 }
 
 .promotion-choice {

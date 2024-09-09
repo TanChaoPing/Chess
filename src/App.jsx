@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import ReactDOM from 'react-dom';
 import './App.css';
+import { jsx } from 'react/jsx-runtime';
 
 function defaultPiecePosition(alp, num) {
   let piece;
@@ -118,6 +118,30 @@ function Cell(props) {
     }
   }
 
+  function editBoardNPoss(cur, poss, x, y) {
+    cur[x][y] = "●";
+    poss.push([x, y]);
+  }
+
+  function rookCheck(coordinate, curBoard, possibleMoves, targetedCells) {
+    for (let i = coordinate[1]-2; i >= 0; i--) { // Left
+      if (checkPieceExistOnCell(72-coordinate[0], i, targetedCells)) break;
+      editBoardNPoss(curBoard, possibleMoves, 72-coordinate[0], i);
+    }
+    for (let i = coordinate[1]; i <= 7; i++) { // Right
+      if (checkPieceExistOnCell(72-coordinate[0], i, targetedCells)) break;
+      editBoardNPoss(curBoard, possibleMoves, 72-coordinate[0], i);
+    }
+    for (let i = 71 - coordinate[0]; i >= 0; i--) { // Up
+      if (checkPieceExistOnCell(i, coordinate[1]-1, targetedCells)) break;
+      editBoardNPoss(curBoard, possibleMoves, i, coordinate[1]-1);
+    }
+    for (let i = 73 - coordinate[0]; i <= 7; i++) { // Down
+      if (checkPieceExistOnCell(i, coordinate[1]-1, targetedCells)) break;
+      editBoardNPoss(curBoard, possibleMoves, i, coordinate[1]-1);
+    }
+  }
+
   function showPieceMoves() {
     let [pc_color, pc_type] = value.split("-");
     let curBoard = props.board;
@@ -130,16 +154,13 @@ function Cell(props) {
       checkPawnAttack(72-coordinate[0], coordinate[1]-1, targetedCells);
       if (coordinate[0] == 66) { // If pawn is at row G
         if (checkPieceExistOnCell(5, coordinate[1]-1, targetedCells)) break;
-        curBoard[5][coordinate[1]-1] = "●";
-        possibleMoves.push([5, coordinate[1]-1]);
+        editBoardNPoss(curBoard, possibleMoves, 5, coordinate[1]-1);
 
         if (checkPieceExistOnCell(4, coordinate[1]-1, targetedCells)) break;
-        curBoard[4][coordinate[1]-1] = "●";
-        possibleMoves.push([4, coordinate[1]-1]);
+        editBoardNPoss(curBoard, possibleMoves, 4, coordinate[1]-1);
       } else {
         if (checkPieceExistOnCell(71-coordinate[0], coordinate[1]-1, targetedCells)) break;
-        curBoard[71 - coordinate[0]][coordinate[1] - 1] = "●";
-        possibleMoves.push([71 - coordinate[0], coordinate[1]-1]);
+        editBoardNPoss(curBoard, possibleMoves, 71-coordinate[0], coordinate[1]-1);
       }
       break;
     }
@@ -148,16 +169,13 @@ function Cell(props) {
       checkPawnAttack(72-coordinate[0], coordinate[1]-1, targetedCells);
       if (coordinate[0] == 71) { // If pawn is at row B
         if (checkPieceExistOnCell(2, coordinate[1]-1, targetedCells)) break;
-        curBoard[2][coordinate[1]-1] = "●";
-        possibleMoves.push([2, coordinate[1]-1]);
+        editBoardNPoss(curBoard, possibleMoves, 2, coordinate[1]-1);
 
         if (checkPieceExistOnCell(3, coordinate[1]-1, targetedCells)) break;
-        curBoard[3][coordinate[1]-1] = "●";
-        possibleMoves.push([3, coordinate[1]-1]);
+        editBoardNPoss(curBoard, possibleMoves, 3, coordinate[1]-1);
       } else {
         if (checkPieceExistOnCell(73-coordinate[0], coordinate[1]-1, targetedCells)) break;
-        curBoard[73 - coordinate[0]][coordinate[1] - 1] = "●";
-        possibleMoves.push([73 - coordinate[0], coordinate[1]-1]);
+        editBoardNPoss(curBoard, possibleMoves, 73-coordinate[0], coordinate[1]-1);
       }
       break;
     }
@@ -165,26 +183,7 @@ function Cell(props) {
     if (pc_type != "pawn") {
       switch (pc_type) {
         case "rook":
-          for (let i = coordinate[1]-2; i >= 0; i--) { // Left
-            if (checkPieceExistOnCell(72-coordinate[0], i, targetedCells)) break;
-            curBoard[72-coordinate[0]][i] = "●";
-            possibleMoves.push([72-coordinate[0], i]);
-          }
-          for (let i = coordinate[1]; i <= 7; i++) { // Right
-            if (checkPieceExistOnCell(72-coordinate[0], i, targetedCells)) break;
-            curBoard[72-coordinate[0]][i] = "●";
-            possibleMoves.push([72-coordinate[0], i]);
-          }
-          for (let i = 71 - coordinate[0]; i >= 0; i--) { // Up
-            if (checkPieceExistOnCell(i, coordinate[1]-1, targetedCells)) break;
-            curBoard[i][coordinate[1]-1] = "●";
-            possibleMoves.push([i, coordinate[1]-1]);
-          }
-          for (let i = 73 - coordinate[0]; i <= 7; i++) { // Down
-            if (checkPieceExistOnCell(i, coordinate[1]-1, targetedCells)) break;
-            curBoard[i][coordinate[1]-1] = "●";
-            possibleMoves.push([i, coordinate[1]-1]);
-          }
+          rookCheck(coordinate, curBoard, possibleMoves, targetedCells);
           break;
         case "knight":
           let knightPoss = [];
@@ -196,60 +195,35 @@ function Cell(props) {
           for (let k of knightPoss) {
             if (k[0] >= 0 && k[0] <= 7 && k[1] >= 0 && k[1] <= 7) {
               if (checkPieceExistOnCell(k[0], k[1], targetedCells)) continue;
-              curBoard[k[0]][k[1]] = "●";
-              possibleMoves.push([k[0], k[1]]);
+              editBoardNPoss(curBoard, possibleMoves, k[0], k[1]);
             }
           }
           break;
         case "queen":
-          for (let i = coordinate[1]-2; i >= 0; i--) { // Left
-            if (checkPieceExistOnCell(72-coordinate[0], i, targetedCells)) break;
-            curBoard[72-coordinate[0]][i] = "●";
-            possibleMoves.push([72-coordinate[0], i]);
-          }
-          for (let i = coordinate[1]; i <= 7; i++) { // Right
-            if (checkPieceExistOnCell(72-coordinate[0], i, targetedCells)) break;
-            curBoard[72-coordinate[0]][i] = "●";
-            possibleMoves.push([72-coordinate[0], i]);
-          }
-          for (let i = 71 - coordinate[0]; i >= 0; i--) { // Up
-            if (checkPieceExistOnCell(i, coordinate[1]-1, targetedCells)) break;
-            curBoard[i][coordinate[1]-1] = "●";
-            possibleMoves.push([i, coordinate[1]-1]);
-          }
-          for (let i = 73 - coordinate[0]; i <= 7; i++) { // Down
-            if (checkPieceExistOnCell(i, coordinate[1]-1, targetedCells)) break;
-            curBoard[i][coordinate[1]-1] = "●";
-            possibleMoves.push([i, coordinate[1]-1]);
-          }
+          rookCheck(coordinate, curBoard, possibleMoves, targetedCells);
         case "bishop":
           for (let i = 71 - coordinate[0], j = coordinate[1]-2; i >= 0, j >= 0; i--, j--) { // NW
             if (i < 0 || j < 0 || checkPieceExistOnCell(i, j, targetedCells)) break;
-            curBoard[i][j] = "●";
-            possibleMoves.push([i, j]);
+            editBoardNPoss(curBoard, possibleMoves, i, j);
           }
           for (let i = 71 - coordinate[0], j = coordinate[1]; i >= 0, j <= 7; i--, j++) { // NE
             if (i < 0 || j > 7 || checkPieceExistOnCell(i, j, targetedCells)) break;
-            curBoard[i][j] = "●";
-            possibleMoves.push([i, j])
+            editBoardNPoss(curBoard, possibleMoves, i, j);
           }
           for (let i = 73 - coordinate[0], j = coordinate[1]-2; i <= 7, j >= 0; i++, j--) { // SW
             if (i > 7 || j < 0 || checkPieceExistOnCell(i, j, targetedCells)) break;
-            curBoard[i][j] = "●";
-            possibleMoves.push([i, j])
+            editBoardNPoss(curBoard, possibleMoves, i, j);
           }
           for (let i = 73 - coordinate[0], j = coordinate[1]; i <= 7, j <= 7; i++, j++) { // SE
             if (i > 7 || j > 7 || checkPieceExistOnCell(i, j, targetedCells)) break;
-            curBoard[i][j] = "●";
-            possibleMoves.push([i, j])
+            editBoardNPoss(curBoard, possibleMoves, i, j);
           }
           break;
         case "king":
           for (let i = 71 - coordinate[0]; i <= 73 - coordinate[0]; i++) {
             for (let j = coordinate[1]-2; j <= coordinate[1]; j++) {
               if (i < 0 || i > 7 || j < 0 || j > 7 || (i == 72 - coordinate[0] && j == coordinate[1]-1) || checkPieceExistOnCell(i, j, targetedCells)) continue;
-              curBoard[i][j] = "●";
-              possibleMoves.push([i, j])
+              editBoardNPoss(curBoard, possibleMoves, i, j);
             }
           }
           break;
@@ -350,11 +324,9 @@ function Cell(props) {
 
 function PopupPromotionModal(props) {
   let newBoard = props.board;
-  let promoted_piece = null;
   
   function promotion(piece) {
     newBoard[props.c0][props.c1] = `${props.color}-${piece}`;
-    promoted_piece = piece;
     props.updateBoard(newBoard);
     props.updatePromotion([false, null, null, null]);
   }
@@ -455,9 +427,15 @@ function ChessBoard() {
   return (
     <>
       <PopupPromotionModal showModal={promote[0]} color={promote[1]} c0={promote[2]} c1={promote[3]} board={board} updateBoard={updateArrayBoard} updatePromotion={updatePromote}/>
+      <img src="/chess-logo.png" width="235px" height="200px"/>
+      <hr id="line"></hr> <br />
+      <div id="turn-container">
+        <h2 id="turn-display">{whiteTurn ? "White" : "Black"}'s turn to move!</h2>
+      </div>
+      <br />
       {reactBoard}
       <br /><br />
-      <button onClick={() => {
+      <button class="start-game" onClick={() => {
         setActive(false);
         setPossibleMoves([]);
         setPrevSelected([]);
@@ -472,10 +450,9 @@ function ChessBoard() {
 
 function GamePage() {
   return (
-    <>
-      <p id="test"></p>
+    <div>
       <ChessBoard />
-    </>
+    </div>
   )
 }
 

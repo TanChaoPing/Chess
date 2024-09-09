@@ -12,3 +12,41 @@
   color: rgb(67, 64, 64);
   vertical-align: top;
 }
+
+.promotion-choice {
+  width: 85px;
+  height: 85px;
+  margin: 15px;
+  border: 3px solid black;
+  border-radius: 15px;
+  vertical-align: top;
+}
+
+.promotion-choice:hover {
+  width: 90px;
+  height: 90px;
+  margin: 15px;
+  border: 3px solid black;
+  border-radius: 15px;
+  vertical-align: top;
+}
+
+#popup-bg {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: fixed;
+  inset: 0px;
+  background-color: black;
+  background: rgba(54, 53, 53, 0.5);
+  backdrop-filter: blur(5px);
+}
+
+#popup-modal {
+  background-color: white;
+  color: black;
+  width: 600px;
+  height: 300px;
+  border-radius: 30px;
+  outline-color: black;
+}

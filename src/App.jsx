@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
-import './App.css'
+import { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
+import './App.css';
 
 function defaultPiecePosition(alp, num) {
   let piece;
@@ -78,14 +79,12 @@ function defaultPiecePosition(alp, num) {
 
 function Cell(props) {
   // Props: board, updateBoard, activeStatus, updateActiveStatus, poss, updatePossibleMoves
-  // prev, updatePrev, turn, updateTurn, target, updateTarget
+  // prev, updatePrev, turn, updateTurn, target, updateTarget, promote, updatePromote
 
   let bgColor = (props.alp + props.num) % 2 === 0 ? "#C4A484" : "white";
   const coordinate = [props.alp, props.num] // coordinate[0] is H-A, coordinate[1] is 1-8
 
-  if (props.target[72-coordinate[0]][coordinate[1]-1]) {
-    bgColor = "pink";
-  }
+  if (props.target[72-coordinate[0]][coordinate[1]-1]) bgColor = "pink";
 
   const [value, setValue] = useState(props.pc)
   
@@ -94,21 +93,15 @@ function Cell(props) {
   }, [props.pc]);
 
   function handleCellClick(activeStat) {
-    
     let skipActive = false;
-    if (!activeStat) {
-      skipActive = showPieceMoves();
-    } else {
-      deactivateOrMove();
-    }
+    (!activeStat) ? skipActive = showPieceMoves() : deactivateOrMove();
     if (!skipActive) props.updateActiveStatus(!activeStat)
   }  
   
   function checkPieceExistOnCell(c1, c2, targetedCells) {
     if (props.board[c1][c2] != "") {
-      if (value.split("-")[0] != props.board[c1][c2].split("-")[0] && value.split("-")[1] != "pawn") { // If different colors
-        targetedCells[c1][c2] = true;
-      }
+      // If different colors
+      if (value.split("-")[0] != props.board[c1][c2].split("-")[0] && value.split("-")[1] != "pawn") targetedCells[c1][c2] = true;
       return true;
     }
     return false;
@@ -117,21 +110,11 @@ function Cell(props) {
   function checkPawnAttack(c1, c2, targetedCells) {
     let curBoard = props.board;
     if (value.split("-")[0] == "white") {
-      if (c1-1 >= 0 && c2-1 >= 0 && curBoard[c1-1][c2-1] != "" && curBoard[c1-1][c2-1].split("-")[0] == "black") {
-        targetedCells[c1-1][c2-1] = true;
-      }
-  
-      if (c1-1 >= 0 && c2+1 < 8 && curBoard[c1-1][c2+1] != "" && curBoard[c1-1][c2+1].split("-")[0] == "black") {
-        targetedCells[c1-1][c2+1] = true;
-      }
+      if (c1-1 >= 0 && c2-1 >= 0 && curBoard[c1-1][c2-1] != "" && curBoard[c1-1][c2-1].split("-")[0] == "black") targetedCells[c1-1][c2-1] = true;
+      if (c1-1 >= 0 && c2+1 < 8 && curBoard[c1-1][c2+1] != "" && curBoard[c1-1][c2+1].split("-")[0] == "black") targetedCells[c1-1][c2+1] = true;
     } else {
-      if (c1+1 < 8 && c2-1 >= 0 && curBoard[c1+1][c2-1] != "" && curBoard[c1+1][c2-1].split("-")[0] == "white") {
-        targetedCells[c1+1][c2-1] = true;
-      }
-  
-      if (c1+1 < 8 && c2+1 < 8 && curBoard[c1+1][c2+1] != "" && curBoard[c1+1][c2+1].split("-")[0] == "white") {
-        targetedCells[c1+1][c2+1] = true;
-      }
+      if (c1+1 < 8 && c2-1 >= 0 && curBoard[c1+1][c2-1] != "" && curBoard[c1+1][c2-1].split("-")[0] == "white") targetedCells[c1+1][c2-1] = true;
+      if (c1+1 < 8 && c2+1 < 8 && curBoard[c1+1][c2+1] != "" && curBoard[c1+1][c2+1].split("-")[0] == "white") targetedCells[c1+1][c2+1] = true;
     }
   }
 
@@ -141,9 +124,7 @@ function Cell(props) {
     let possibleMoves = [];
     let targetedCells = props.target;
 
-    if ((props.turn == true && pc_color == "black") || (props.turn == false && pc_color == "white")) {
-      return true;
-    }
+    if ((props.turn == true && pc_color == "black") || (props.turn == false && pc_color == "white")) return true;
 
     while (pc_type == "pawn" && pc_color == "white") {
       checkPawnAttack(72-coordinate[0], coordinate[1]-1, targetedCells);
@@ -290,7 +271,6 @@ function Cell(props) {
     props.updateBoard(curBoard);
     
     if (possibleMoves.length == 0) return true;
-
     return false;
   }
 
@@ -298,7 +278,7 @@ function Cell(props) {
     let selectMove = false;
     let possMoves = props.poss;
 
-    // Check if user click on cells with ●
+    // Check if user click on cells with ● (Move)
     for (let coord of possMoves) {
       if (72 - coordinate[0] == coord[0] && coordinate[1] - 1 == coord[1]) {
         selectMove = true;
@@ -308,12 +288,21 @@ function Cell(props) {
 
     if (selectMove) { // Move the piece
       let newBoard = props.board;
-      for (let coord of props.poss) {
-        if (newBoard[coord[0]][coord[1]] == "●") newBoard[coord[0]][coord[1]] = "";
-      }
+      for (let coord of props.poss) if (newBoard[coord[0]][coord[1]] == "●") newBoard[coord[0]][coord[1]] = "";
 
       newBoard[72 - coordinate[0]][coordinate[1] - 1] = props.prev[2];
       newBoard[props.prev[0]][props.prev[1]] = "";
+
+      // Promotion Detection
+      let tempVal = props.prev[2].split("-")
+      if (tempVal[1] == "pawn") {
+        if (tempVal[0] == "white" && 72-coordinate[0] == 0) {
+          props.updatePromotion([true, "white", 72-coordinate[0], coordinate[1]-1]);
+        }
+        if (tempVal[0] == "black" && 72-coordinate[0] == 7) {
+          props.updatePromotion([true, "black", 72-coordinate[0], coordinate[1]-1]);
+        }
+      }
 
       let inactiveTarget = props.target;
       for (let i = 0; i < 8; i++) {
@@ -321,18 +310,17 @@ function Cell(props) {
           inactiveTarget[i][j] = false;
         }
       }
-      props.updateTarget(inactiveTarget);
 
+      props.updateTarget(inactiveTarget);
       props.updateBoard(newBoard);
       props.updateTurn(!props.turn);
+      
       return; 
     }
 
-    // If tap on cells other than ●, it will clear all the dots
+    // Deactivate
     let inactiveBoard = props.board;
-    for (let coord of props.poss) {
-      if (inactiveBoard[coord[0]][coord[1]] == "●") inactiveBoard[coord[0]][coord[1]] = "";
-    }
+    for (let coord of props.poss) if (inactiveBoard[coord[0]][coord[1]] == "●") inactiveBoard[coord[0]][coord[1]] = "";
 
     let inactiveTarget = props.target;
     for (let i = 0; i < 8; i++) {
@@ -340,8 +328,8 @@ function Cell(props) {
         inactiveTarget[i][j] = false;
       }
     }
+
     props.updateTarget(inactiveTarget);
-    
     props.updateBoard(inactiveBoard);
   }
 
@@ -357,6 +345,35 @@ function Cell(props) {
       }>
       {(value != "" && value != "●") ? <img src={`/${value}.png`} width="60px" height="60px" /> : value}
     </button>
+  )
+}
+
+function PopupPromotionModal(props) {
+  let newBoard = props.board;
+  let promoted_piece = null;
+  
+  function promotion(piece) {
+    newBoard[props.c0][props.c1] = `${props.color}-${piece}`;
+    promoted_piece = piece;
+    props.updateBoard(newBoard);
+    props.updatePromotion([false, null, null, null]);
+  }
+
+  return (
+    <>
+      { props.showModal &&
+        <div id="popup-bg">
+          <div id="popup-modal">
+            <h1>Promotion!</h1>
+            <p>Which piece do you want to promote the pawn to?</p>
+            <button className="promotion-choice" onClick={() => {promotion("queen")}}><img src={`/${props.color}-queen.png`} /></button>
+            <button className="promotion-choice" onClick={() => {promotion("knight")}}><img src={`/${props.color}-knight.png`} /></button>
+            <button className="promotion-choice" onClick={() => {promotion("rook")}}><img src={`/${props.color}-rook.png`} /></button>
+            <button className="promotion-choice" onClick={() => {promotion("bishop")}}><img src={`/${props.color}-bishop.png`} /></button>
+          </div>
+        </div>
+      }
+    </>
   )
 }
 
@@ -378,9 +395,7 @@ function BoardType(type) {
 
 function defaultTargeted() {
   let targetedBoard = new Array(8);
-  for (let i = 0; i < 8; i++) {
-    targetedBoard[i] = new Array(8).fill(false);
-  }
+  for (let i = 0; i < 8; i++) targetedBoard[i] = new Array(8).fill(false);
   return targetedBoard;
 }
 
@@ -389,6 +404,7 @@ function ChessBoard() {
   const [possibleMoves, setPossibleMoves] = useState([]);
   const [prevSelected, setPrevSelected] = useState([]);
   const [whiteTurn, setWhiteTurn] = useState(true);
+  const [promote, setPromote] = useState([false, null, null, null]); // showModal, color, c0, c1
 
   const [targeted, setTargeted] = useState(defaultTargeted());
   const [board, setBoard] = useState(BoardType("empty"));
@@ -396,13 +412,14 @@ function ChessBoard() {
 
   useEffect(() => {
     setReactBoard(updateHTMLBoard())
-  }, [board, targeted])
+  }, [board, targeted, promote])
 
   function updateTurn(turn) {setWhiteTurn(turn);}
   function updatePrevSelected(prevCell) {setPrevSelected(prevCell)}
   function updatePossibleMoves(poss) {setPossibleMoves([...poss])}
   function updateArrayBoard(latest_board) {setBoard([...latest_board])}
   function updateActive() {setActive(!active)}
+  function updatePromote(arr) {setPromote(arr)}
   function updateTargets(newTargets) {setTargeted([...newTargets])}
 
   function updateHTMLBoard() {
@@ -425,6 +442,7 @@ function ChessBoard() {
               updateTurn={updateTurn}
               target={targeted}
               updateTarget={updateTargets}
+              updatePromotion={updatePromote}
               />)
           }
           return <div key={`row-${-i+73}`} id="chessRow">{rowOfCells}</div>;
@@ -436,6 +454,7 @@ function ChessBoard() {
 
   return (
     <>
+      <PopupPromotionModal showModal={promote[0]} color={promote[1]} c0={promote[2]} c1={promote[3]} board={board} updateBoard={updateArrayBoard} updatePromotion={updatePromote}/>
       {reactBoard}
       <br /><br />
       <button onClick={() => {

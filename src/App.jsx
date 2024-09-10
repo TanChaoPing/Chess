@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import './App.css';
-import { jsx } from 'react/jsx-runtime';
 
 function defaultPiecePosition(alp, num) {
   let piece;
@@ -78,8 +77,8 @@ function defaultPiecePosition(alp, num) {
 }
 
 function Cell(props) {
-  // Props: board, updateBoard, activeStatus, updateActiveStatus, poss, updatePossibleMoves
-  // prev, updatePrev, turn, updateTurn, target, updateTarget, promote, updatePromote
+  // Props: board, updateBoard, activeStatus, updateActiveStatus, poss, updatePossibleMoves, prev, updatePrev,
+  // turn, updateTurn, target, updateTarget, promote, updatePromote
 
   let bgColor = (props.alp + props.num) % 2 === 0 ? "#C4A484" : "white";
   const coordinate = [props.alp, props.num] // coordinate[0] is H-A, coordinate[1] is 1-8
@@ -237,13 +236,14 @@ function Cell(props) {
     // Add targeted cells into possible moves.
     for (let i = 0; i < 8; i++) {
       for (let j = 0; j < 8; j++) {
-        if (targetedCells[i][j]) possibleMoves.push([i, j]);
+        if (targetedCells[i][j]) {
+          possibleMoves.push([i, j]);
+        }
       }
     }
 
     props.updatePossibleMoves(possibleMoves);
     props.updateBoard(curBoard);
-    
     if (possibleMoves.length == 0) return true;
     return false;
   }
@@ -261,9 +261,9 @@ function Cell(props) {
     }
 
     if (selectMove) { // Move the piece
-      let newBoard = props.board;
+      let newBoard = [...props.board];
+      
       for (let coord of props.poss) if (newBoard[coord[0]][coord[1]] == "●") newBoard[coord[0]][coord[1]] = "";
-
       newBoard[72 - coordinate[0]][coordinate[1] - 1] = props.prev[2];
       newBoard[props.prev[0]][props.prev[1]] = "";
 
@@ -284,11 +284,27 @@ function Cell(props) {
           inactiveTarget[i][j] = false;
         }
       }
+      
+      // New History Entry
+      let newHistoryEntry = new Array(8);
+      for (let i = 0; i < 8; i++) {
+        newHistoryEntry[i] = new Array(8);
+      }
+
+      for (let i = 0; i < 8; i++) {
+        for (let j = 0; j < 8; j++) {
+          newHistoryEntry[i][j] = newBoard[i][j];
+        }
+      }
+      
+      let newHistory = props.history.map(arr => [...arr]);
+      newHistory.push(newHistoryEntry);
+      console.log(newHistory);
+      props.updateHistory(newHistory);
 
       props.updateTarget(inactiveTarget);
       props.updateBoard(newBoard);
       props.updateTurn(!props.turn);
-      
       return; 
     }
 
@@ -311,7 +327,7 @@ function Cell(props) {
     <button
       className="chess-cell"
       id={`${String.fromCharCode(props.alp)}-${props.num}`}
-      style={{backgroundColor: `${bgColor}`}}
+      style={{backgroundColor: `${bgColor}`, disabled: `${props.winStatus}`}}
       onClick={() => {
         handleCellClick(props.activeStatus)
         props.updatePrev([72 - coordinate[0], coordinate[1] - 1, value])
@@ -377,6 +393,7 @@ function ChessBoard() {
   const [prevSelected, setPrevSelected] = useState([]);
   const [whiteTurn, setWhiteTurn] = useState(true);
   const [promote, setPromote] = useState([false, null, null, null]); // showModal, color, c0, c1
+  const [history, setHistory] = useState([BoardType("default")]);
 
   const [targeted, setTargeted] = useState(defaultTargeted());
   const [board, setBoard] = useState(BoardType("empty"));
@@ -384,7 +401,29 @@ function ChessBoard() {
 
   useEffect(() => {
     setReactBoard(updateHTMLBoard())
-  }, [board, targeted, promote])
+  }, [board, history, targeted, promote])
+
+  function undoMove() {
+    if (history.length != 1) {
+      let newBoard = new Array(8);
+      for (let i = 0; i < 8; i++) {
+        newBoard[i] = new Array(8);
+      }
+
+      for (let i = 0; i < 8; i++) {
+        for (let j = 0; j < 8; j++) {
+          newBoard[i][j] = history[history.length-2][i][j];
+        }
+      }
+      setBoard(newBoard);
+
+      let newHistory = history.map(arr => [...arr]);
+      newHistory.pop();
+      console.log(newHistory);
+      setHistory(newHistory);
+      setWhiteTurn(!whiteTurn);
+    }
+  }
 
   function updateTurn(turn) {setWhiteTurn(turn);}
   function updatePrevSelected(prevCell) {setPrevSelected(prevCell)}
@@ -392,8 +431,9 @@ function ChessBoard() {
   function updateArrayBoard(latest_board) {setBoard([...latest_board])}
   function updateActive() {setActive(!active)}
   function updatePromote(arr) {setPromote(arr)}
+  function updateHistory(hist) {setHistory([...hist])}
   function updateTargets(newTargets) {setTargeted([...newTargets])}
-
+  
   function updateHTMLBoard() {
     let HTML_Board = [];
     for (let i = 72; i >= 65; i--) {
@@ -415,6 +455,8 @@ function ChessBoard() {
               target={targeted}
               updateTarget={updateTargets}
               updatePromotion={updatePromote}
+              history={history}
+              updateHistory={updateHistory}
               />)
           }
           return <div key={`row-${-i+73}`} id="chessRow">{rowOfCells}</div>;
@@ -435,15 +477,19 @@ function ChessBoard() {
       <br />
       {reactBoard}
       <br /><br />
-      <button class="start-game" onClick={() => {
+      <button id="start-game" className="game-buttons" onClick={() => {
         setActive(false);
         setPossibleMoves([]);
         setPrevSelected([]);
         setWhiteTurn(true);
         setTargeted(defaultTargeted());
-        setBoard(BoardType("default"))
+        setBoard(BoardType("default"));
+        setHistory([BoardType("default")]);
         setReactBoard(updateHTMLBoard());
       }}>Start Game!</button>
+      <button id="undo-move" className="game-buttons" onClick={() => {
+        undoMove();
+      }}>Undo Move</button>
     </>
   )
 }

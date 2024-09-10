@@ -36,7 +36,7 @@
   text-transform: uppercase;
 }
 
-.start-game {
+.game-buttons {
   background-color: #FFFFFF;
   border: 1px solid #222222;
   border-radius: 8px;
@@ -48,7 +48,7 @@
   font-size: 16px;
   font-weight: 600;
   line-height: 20px;
-  margin: 0;
+  margin-left: 15px;
   outline: none;
   padding: 13px 23px;
   position: relative;
@@ -61,12 +61,12 @@
   width: auto;
 }
 
-.start-game:focus-visible {
+.game-buttons:focus-visible {
   box-shadow: #222222 0 0 0 2px, rgba(255, 255, 255, 0.8) 0 0 0 4px;
   transition: box-shadow .2s;
 }
 
-.start-game:active {
+.game-buttons:active {
   background-color: #F7F7F7;
   border-color: #000000;
   transform: scale(.96);

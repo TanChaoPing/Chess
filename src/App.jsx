@@ -364,6 +364,23 @@ function Cell(props) {
       possibleMoves = [...newPossibleMoves];
     }
 
+    // Ensure you don't accidentally check yourself
+    let opposingColor = (pc_color == "white") ? "black" : "white";
+    let newPossibleMoves = [];
+    for (let p of possibleMoves) {
+        const checkBoard = structuredClone(curBoard);
+        checkBoard[p[0]][p[1]] = val;
+        checkBoard[72-coords[0]][coords[1]-1] = "";
+        
+        if (checkDetection(opposingColor, checkBoard)) {
+          if (curBoard[p[0]][p[1]] == "●") curBoard[p[0]][p[1]] = "";
+          targetedCells[p[0]][p[1]] = false;
+        } else {
+          newPossibleMoves.push(p);
+        }
+    }
+    possibleMoves = [...newPossibleMoves];
+
     if (stop) {
       let noMoves = true;
       for (let p of possibleMoves) {
@@ -411,8 +428,12 @@ function Cell(props) {
       newBoard[72 - coordinate[0]][coordinate[1] - 1] = props.prev[2];
       newBoard[props.prev[0]][props.prev[1]] = "";
 
-      // Promotion Detection
+      
       let tempVal = props.prev[2].split("-")
+
+      if (tempVal[1] == "king" && !props.kingMoved) props.updateKingMoved(true);
+
+      // Promotion Detection
       if (tempVal[1] == "pawn") {
         if (tempVal[0] == "white" && 72-coordinate[0] == 0) {
           props.updatePromotion([true, "white", 72-coordinate[0], coordinate[1]-1]);
@@ -571,6 +592,7 @@ function ChessBoard() {
   const [possibleMoves, setPossibleMoves] = useState([]);
   const [prevSelected, setPrevSelected] = useState([]);
   const [whiteTurn, setWhiteTurn] = useState(true);
+  const [kingMoved, setKingMoved] = useState(false);
   const [promote, setPromote] = useState([false, null, null, null]); // showModal, color, c1, c2
   const [checked, setChecked] = useState(null);
   const [checkmate, setCheckmate] = useState(false);
@@ -596,8 +618,9 @@ function ChessBoard() {
           newBoard[i][j] = history[history.length-2][i][j];
         }
       }
+      setTargeted(defaultTargeted());
       setBoard(newBoard);
-
+      
       let newHistory = history.map(arr => [...arr]);
       newHistory.pop();
       setHistory(newHistory);
@@ -605,7 +628,8 @@ function ChessBoard() {
     }
   }
 
-  function updateTurn(turn) {setWhiteTurn(turn);}
+  function updateTurn(turn) {setWhiteTurn(turn)}
+  function updateKingMoved(status) {setKingMoved(status)}
   function updatePrevSelected(prevCell) {setPrevSelected(prevCell)}
   function updatePossibleMoves(poss) {setPossibleMoves([...poss])}
   function updateArrayBoard(latest_board) {setBoard([...latest_board])}
@@ -634,6 +658,8 @@ function ChessBoard() {
               updatePrev={updatePrevSelected}
               turn={whiteTurn}
               updateTurn={updateTurn}
+              kingMoved={kingMoved}
+              updateKingMoved={updateKingMoved}
               target={targeted}
               updateTarget={updateTargets}
               updatePromotion={updatePromote}
@@ -669,6 +695,7 @@ function ChessBoard() {
         setPossibleMoves([]);
         setPrevSelected([]);
         setWhiteTurn(true);
+        setKingMoved(false);
         setTargeted(defaultTargeted());
         setChecked(null);
         setCheckmate(false);

@@ -325,6 +325,25 @@ function Cell(props) {
               editBoardNPoss(curBoard, possibleMoves, i, j);
             }
           }
+
+          // Castling
+          if (pc_color == "white" && coords[0] == 65 && !props.whiteKingMoved) {
+            if (curBoard[7][7] == "white-rook" && curBoard[7][6] == "" && curBoard[7][5] == "●") { // King Side
+              editBoardNPoss(curBoard, possibleMoves, 7, 6);
+            }
+            if (curBoard[7][0] == "white-rook" && curBoard[7][1] == "" && curBoard[7][2] == "" && curBoard[7][3] == "●") { // Queen Side
+              editBoardNPoss(curBoard, possibleMoves, 7, 2);
+            }
+          }
+
+          if (pc_color == "black" && coords[0] == 72 && !props.blackKingMoved) {
+            if (curBoard[0][0] == "black-rook" && curBoard[0][1] == "" && curBoard[0][2] == "" && curBoard[0][3] == "●") { // King Side
+              editBoardNPoss(curBoard, possibleMoves, 0, 2);
+            }
+            if (curBoard[0][7] == "black-rook" && curBoard[0][6] == "" && curBoard[0][5] == "●") { // Queen Side
+              editBoardNPoss(curBoard, possibleMoves, 0, 6);
+            }
+          }
           break;
         default: // Cell has no pieces
           return true;
@@ -431,7 +450,29 @@ function Cell(props) {
       
       let tempVal = props.prev[2].split("-")
 
-      if (tempVal[1] == "king" && !props.kingMoved) props.updateKingMoved(true);
+      // King Moved
+      if (tempVal[0] == "white" && tempVal[1] == "king" && !props.whiteKingMoved) {
+        if (72-coordinate[0] == 7 && coordinate[1]-1 == 6) { // White King Side
+          newBoard[7][7] = "";
+          newBoard[7][5] = "white-rook";
+        }
+        if (72-coordinate[0] == 7 && coordinate[1]-1 == 2) { // White Queen Side
+          newBoard[7][0] = "";
+          newBoard[7][3] = "white-rook";
+        }
+        props.updateWhiteKingMoved(true);
+      }
+      if (tempVal[0] == "black" && tempVal[1] == "king" && !props.blackKingMoved) {
+        if (72-coordinate[0] == 0 && coordinate[1]-1 == 6) { // Black King Side
+          newBoard[0][7] = "";
+          newBoard[0][5] = "black-rook";
+        }
+        if (72-coordinate[0] == 0 && coordinate[1]-1 == 2) { // Black King Side
+          newBoard[0][0] = "";
+          newBoard[0][3] = "black-rook";
+        }
+        props.updateBlackKingMoved(true);
+      }
 
       // Promotion Detection
       if (tempVal[1] == "pawn") {
@@ -592,7 +633,8 @@ function ChessBoard() {
   const [possibleMoves, setPossibleMoves] = useState([]);
   const [prevSelected, setPrevSelected] = useState([]);
   const [whiteTurn, setWhiteTurn] = useState(true);
-  const [kingMoved, setKingMoved] = useState(false);
+  const [whiteKingMoved, setWhiteKingMoved] = useState(false);
+  const [blackKingMoved, setBlackKingMoved] = useState(false);
   const [promote, setPromote] = useState([false, null, null, null]); // showModal, color, c1, c2
   const [checked, setChecked] = useState(null);
   const [checkmate, setCheckmate] = useState(false);
@@ -620,7 +662,7 @@ function ChessBoard() {
       }
       setTargeted(defaultTargeted());
       setBoard(newBoard);
-      
+
       let newHistory = history.map(arr => [...arr]);
       newHistory.pop();
       setHistory(newHistory);
@@ -629,7 +671,8 @@ function ChessBoard() {
   }
 
   function updateTurn(turn) {setWhiteTurn(turn)}
-  function updateKingMoved(status) {setKingMoved(status)}
+  function updateWhiteKingMoved(status) {setWhiteKingMoved(status)}
+  function updateBlackKingMoved(status) {setBlackKingMoved(status)}
   function updatePrevSelected(prevCell) {setPrevSelected(prevCell)}
   function updatePossibleMoves(poss) {setPossibleMoves([...poss])}
   function updateArrayBoard(latest_board) {setBoard([...latest_board])}
@@ -658,8 +701,10 @@ function ChessBoard() {
               updatePrev={updatePrevSelected}
               turn={whiteTurn}
               updateTurn={updateTurn}
-              kingMoved={kingMoved}
-              updateKingMoved={updateKingMoved}
+              whiteKingMoved={whiteKingMoved}
+              updateWhiteKingMoved={updateWhiteKingMoved}
+              blackKingMoved={blackKingMoved}
+              updateBlackKingMoved={updateBlackKingMoved}
               target={targeted}
               updateTarget={updateTargets}
               updatePromotion={updatePromote}
@@ -695,7 +740,8 @@ function ChessBoard() {
         setPossibleMoves([]);
         setPrevSelected([]);
         setWhiteTurn(true);
-        setKingMoved(false);
+        setWhiteKingMoved(false);
+        setBlackKingMoved(false);
         setTargeted(defaultTargeted());
         setChecked(null);
         setCheckmate(false);

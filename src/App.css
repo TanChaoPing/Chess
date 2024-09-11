@@ -120,3 +120,26 @@
   border-radius: 30px;
   outline-color: black;
 }
+
+#winner-bg {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: fixed;
+  inset: 0px;
+  background-color: black;
+  background: rgba(54, 53, 53, 0.5);
+  backdrop-filter: blur(5px);
+}
+
+#winner-modal {
+  background-color: white;
+  color: black;
+  width: 600px;
+  height: 125px;
+  border-radius: 30px;
+  outline-color: black;
+  justify-content: center;
+  align-items: center;
+  padding: 5px;
+}

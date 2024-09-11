@@ -282,7 +282,7 @@ function Cell(props) {
     if (pc_type != "pawn") {
       switch (pc_type) {
         case "rook":
-          rookCheck(coords, curBoard, possibleMoves, targetedCells);
+          rookCheck(val, coords, curBoard, possibleMoves, targetedCells);
           break;
         case "knight":
           let knightPoss = [];
@@ -299,7 +299,7 @@ function Cell(props) {
           }
           break;
         case "queen":
-          rookCheck(coords, curBoard, possibleMoves, targetedCells);
+          rookCheck(val, coords, curBoard, possibleMoves, targetedCells);
         case "bishop":
           for (let i = 71 - coords[0], j = coords[1]-2; i >= 0, j >= 0; i--, j--) { // NW
             if (i < 0 || j < 0 || checkPieceExistOnCell(val, i, j, targetedCells)) break;

@@ -563,7 +563,6 @@ function Cell(props) {
         newCastlingHistory[1].push(global_king_moved[1]);
       }
       props.updateCastHis(newCastlingHistory);
-      console.log(newCastlingHistory);
 
       props.updateTarget(inactiveTarget);
       props.updateBoard(newBoard);

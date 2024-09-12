@@ -98,6 +98,9 @@ function checkDetection(color, board) {
           case "queen":
             check = checkDetectionRook(opposingColor, board, i, j) || checkDetectionBishop(opposingColor, board, i, j);
             break;
+          case "king":
+            check = checkDetectionKing(opposingColor, board, i, j);
+            break;
           default:
             break;
         }
@@ -172,6 +175,21 @@ function checkDetectionBishop(opposingColor, board, c1, c2) {
     if (board[i][j] == `${opposingColor}-king`) return true;
     if (board[i][j] != "") break;
   }
+  return false;
+}
+
+function checkDetectionKing(opposingColor, board, c1, c2) {
+  for (let i = c1-1; i < c1+2; i++) {
+    for (let j = c2-1; j < c2+2; j++) {
+      if ((c1 == i && c2 == j) || i < 0 || i > 7 || j < 0 || j > 7) continue;
+      if (board[i][j] == `${opposingColor}-king`) return true; 
+    }
+  }
+  return false;
+}
+
+function checkDraw(whiteCount, blackCount) {
+  if (whiteCount == 1 && blackCount == 1) return true;
   return false;
 }
 
@@ -485,10 +503,25 @@ function Cell(props) {
       }
 
       let inactiveTarget = props.target;
+      let whiteCount = 0, blackCount = 0;
       for (let i = 0; i < 8; i++) {
         for (let j = 0; j < 8; j++) {
+          // Set Inactive Target
           inactiveTarget[i][j] = false;
+
+          // Count number of pieces
+          let pc_color = newBoard[i][j].split("-")[0];
+          if (pc_color == "white") {
+            whiteCount++;
+          } else if (pc_color == "black") {
+            blackCount++;
+          }
         }
+      }
+
+      // Check Draw
+      if (checkDraw(whiteCount, blackCount)) {
+        props.updateDraw(true);
       }
       
       // New History Entry
@@ -501,22 +534,13 @@ function Cell(props) {
         props.updateChecked(opposingColor);
         
         // Check checkmate & Undo need to reset color
-        let checkmated = true;
-        for (let i = 0; i < 8; i++) {
-          for (let j = 0; j < 8; j++) {
-            if (newBoard[i][j].split("-")[0] == opposingColor) {
-               if (!showPieceMoves(true, newBoard[i][j], [72-i, j+1])) {
-                  checkmated = false;
-                  break;
-               }
-            }
-          }
-          if (!checkmated) break;
-        }
-        if (checkmated) props.updateCheckmate(true);
+        if (availableMoves(newBoard, opposingColor)) props.updateCheckmate(true);
       } else {
         props.updateChecked(null);
       }
+
+      // Stalemate Detection
+      if (availableMoves(newBoard, opposingColor)) props.updateStalemate(true);
 
       // History + Stuff Update 
       let newHistory = props.history.map(arr => [...arr]);
@@ -543,6 +567,22 @@ function Cell(props) {
 
     props.updateTarget(inactiveTarget);
     props.updateBoard(inactiveBoard);
+  }
+
+  function availableMoves(newBoard, opposingColor) {
+    let noMoves = true;
+    for (let i = 0; i < 8; i++) {
+      for (let j = 0; j < 8; j++) {
+        if (newBoard[i][j].split("-")[0] == opposingColor) {
+            if (!showPieceMoves(true, newBoard[i][j], [72-i, j+1])) {
+              noMoves = false;
+              break;
+            }
+        }
+      }
+      if (!noMoves) break;
+    }
+    return noMoves;
   }
 
   return (
@@ -589,15 +629,28 @@ function PopupPromotionModal(props) {
 
 function WinnerWindow(props) {
   let winColor = props.winnerColor ? "White" : "Black";
+  let modalText;
+  if (props.checkmate) {
+    modalText = `Congratulations! ${winColor} has won the game!`;
+  }
+  if (props.draw) {
+    modalText = `The game has ended in a draw!`;
+  }
+  if (props.stalemate) {
+    modalText = `The game has ended in a stalemate!`;
+  }
+
   return (
     <>
     {
       props.showModal &&
       <div id="winner-bg">
         <div id="winner-modal">
-          <h2 id="winner-text">Congratulations! {winColor} has won the game!</h2>
+          <h2 id="winner-text">{modalText}</h2>
           <button className="game-buttons" onClick={() => {
             props.updateCheckmate(false);
+            props.updateDraw(false);
+            props.updateStalemate(false);
           }}>Close Window</button>
         </div>
       </div>
@@ -638,6 +691,8 @@ function ChessBoard() {
   const [promote, setPromote] = useState([false, null, null, null]); // showModal, color, c1, c2
   const [checked, setChecked] = useState(null);
   const [checkmate, setCheckmate] = useState(false);
+  const [draw, setDraw] = useState(false);
+  const [stalemate, setStalemate] = useState(false);
   const [history, setHistory] = useState([BoardType("default")]);
 
   const [targeted, setTargeted] = useState(defaultTargeted());
@@ -680,6 +735,8 @@ function ChessBoard() {
   function updatePromote(arr) {setPromote(arr)}
   function updateChecked(status) {setChecked(status)}
   function updateCheckmate(check) {setCheckmate(check)}
+  function updateDraw(status) {setDraw(status)}
+  function updateStalemate(status) {setStalemate(status)}
   function updateHistory(hist) {setHistory([...hist])}
   function updateTargets(newTargets) {setTargeted([...newTargets])}
   
@@ -712,6 +769,8 @@ function ChessBoard() {
               updateChecked={updateChecked}
               checkmate={checkmate}
               updateCheckmate={updateCheckmate}
+              updateDraw={updateDraw}
+              updateStalemate={updateStalemate}
               history={history}
               updateHistory={updateHistory}
               />)
@@ -725,7 +784,7 @@ function ChessBoard() {
 
   return (
     <>
-      <WinnerWindow showModal={checkmate} winnerColor={!whiteTurn} updateCheckmate={updateCheckmate}/>
+      <WinnerWindow showModal={checkmate || draw || stalemate} checkmate={checkmate} draw={draw} stalemate={stalemate} winnerColor={!whiteTurn} updateCheckmate={updateCheckmate} updateDraw={updateDraw} updateStalemate={updateStalemate}/>
       <PopupPromotionModal showModal={promote[0]} color={promote[1]} c0={promote[2]} c1={promote[3]} board={board} updateBoard={updateArrayBoard} updatePromotion={updatePromote}/>
       <img src="/chess-logo.png" width="235px" height="200px"/>
       <hr id="line"></hr> <br />
@@ -745,6 +804,8 @@ function ChessBoard() {
         setTargeted(defaultTargeted());
         setChecked(null);
         setCheckmate(false);
+        setDraw(false);
+        setStalemate(false);
         setBoard(BoardType("default"));
         setHistory([BoardType("default")]);
         setReactBoard(updateHTMLBoard());

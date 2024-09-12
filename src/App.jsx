@@ -465,30 +465,36 @@ function Cell(props) {
       newBoard[72 - coordinate[0]][coordinate[1] - 1] = props.prev[2];
       newBoard[props.prev[0]][props.prev[1]] = "";
 
-      
       let tempVal = props.prev[2].split("-")
 
-      // King Moved
-      if (tempVal[0] == "white" && tempVal[1] == "king" && !props.whiteKingMoved) {
-        if (72-coordinate[0] == 7 && coordinate[1]-1 == 6) { // White King Side
-          newBoard[7][7] = "";
-          newBoard[7][5] = "white-rook";
+      // King Move & Castling Move
+      let global_king_moved = [false || props.whiteKingMoved, false || props.blackKingMoved];
+      if (tempVal[0] == "white" && tempVal[1] == "king") {
+        if (!props.whiteKingMoved) {
+          if (72-coordinate[0] == 7 && coordinate[1]-1 == 6) { // White King Side
+            newBoard[7][7] = "";
+            newBoard[7][5] = "white-rook";
+          }
+          if (72-coordinate[0] == 7 && coordinate[1]-1 == 2) { // White Queen Side
+            newBoard[7][0] = "";
+            newBoard[7][3] = "white-rook";
+          }
         }
-        if (72-coordinate[0] == 7 && coordinate[1]-1 == 2) { // White Queen Side
-          newBoard[7][0] = "";
-          newBoard[7][3] = "white-rook";
-        }
+        global_king_moved[0] = true; 
         props.updateWhiteKingMoved(true);
       }
-      if (tempVal[0] == "black" && tempVal[1] == "king" && !props.blackKingMoved) {
-        if (72-coordinate[0] == 0 && coordinate[1]-1 == 6) { // Black King Side
-          newBoard[0][7] = "";
-          newBoard[0][5] = "black-rook";
+      if (tempVal[0] == "black" && tempVal[1] == "king") {
+        if (!props.blackKingMoved) {
+          if (72-coordinate[0] == 0 && coordinate[1]-1 == 6) { // Black King Side
+            newBoard[0][7] = "";
+            newBoard[0][5] = "black-rook";
+          }
+          if (72-coordinate[0] == 0 && coordinate[1]-1 == 2) { // Black Queen Side
+            newBoard[0][0] = "";
+            newBoard[0][3] = "black-rook";
+          }
         }
-        if (72-coordinate[0] == 0 && coordinate[1]-1 == 2) { // Black King Side
-          newBoard[0][0] = "";
-          newBoard[0][3] = "black-rook";
-        }
+        global_king_moved[1] = true;
         props.updateBlackKingMoved(true);
       }
 
@@ -534,7 +540,10 @@ function Cell(props) {
         props.updateChecked(opposingColor);
         
         // Check checkmate & Undo need to reset color
-        if (availableMoves(newBoard, opposingColor)) props.updateCheckmate(true);
+        if (availableMoves(newBoard, opposingColor)) {
+          props.updateCheckmate(true);
+          return;
+        }
       } else {
         props.updateChecked(null);
       }
@@ -546,6 +555,15 @@ function Cell(props) {
       let newHistory = props.history.map(arr => [...arr]);
       newHistory.push(newHistoryEntry);
       props.updateHistory(newHistory);
+
+      let newCastlingHistory = structuredClone(props.castHis);
+      if (props.turn) {
+        newCastlingHistory[0].push(global_king_moved[0]);
+      } else {
+        newCastlingHistory[1].push(global_king_moved[1]);
+      }
+      props.updateCastHis(newCastlingHistory);
+      console.log(newCastlingHistory);
 
       props.updateTarget(inactiveTarget);
       props.updateBoard(newBoard);
@@ -686,14 +704,18 @@ function ChessBoard() {
   const [possibleMoves, setPossibleMoves] = useState([]);
   const [prevSelected, setPrevSelected] = useState([]);
   const [whiteTurn, setWhiteTurn] = useState(true);
+
   const [whiteKingMoved, setWhiteKingMoved] = useState(false);
   const [blackKingMoved, setBlackKingMoved] = useState(false);
+
   const [promote, setPromote] = useState([false, null, null, null]); // showModal, color, c1, c2
   const [checked, setChecked] = useState(null);
   const [checkmate, setCheckmate] = useState(false);
   const [draw, setDraw] = useState(false);
   const [stalemate, setStalemate] = useState(false);
+
   const [history, setHistory] = useState([BoardType("default")]);
+  const [castlingHistory, setCastlingHistory] = useState([[], []]);
 
   const [targeted, setTargeted] = useState(defaultTargeted());
   const [board, setBoard] = useState(BoardType("empty"));
@@ -705,21 +727,23 @@ function ChessBoard() {
 
   function undoMove() {
     if (history.length != 1) {
-      let newBoard = new Array(8);
-      for (let i = 0; i < 8; i++) {
-        newBoard[i] = new Array(8);
-      }
-
-      for (let i = 0; i < 8; i++) {
-        for (let j = 0; j < 8; j++) {
-          newBoard[i][j] = history[history.length-2][i][j];
-        }
-      }
+      let newBoard = structuredClone(history[history.length-2]);
       setTargeted(defaultTargeted());
       setBoard(newBoard);
 
       let newHistory = history.map(arr => [...arr]);
       newHistory.pop();
+
+      let newCastlingHistory = structuredClone(castlingHistory);
+      if (!whiteTurn) {
+        if (whiteKingMoved) setWhiteKingMoved(false);
+        newCastlingHistory[0].pop();
+      } else {
+        if (blackKingMoved) setBlackKingMoved(false);
+        newCastlingHistory[1].pop();
+      }
+      setCastlingHistory(newCastlingHistory);
+
       setHistory(newHistory);
       setWhiteTurn(!whiteTurn);
     }
@@ -738,6 +762,7 @@ function ChessBoard() {
   function updateDraw(status) {setDraw(status)}
   function updateStalemate(status) {setStalemate(status)}
   function updateHistory(hist) {setHistory([...hist])}
+  function updateCastlingHistory(hist) {setCastlingHistory([...hist])}
   function updateTargets(newTargets) {setTargeted([...newTargets])}
   
   function updateHTMLBoard() {
@@ -773,6 +798,8 @@ function ChessBoard() {
               updateStalemate={updateStalemate}
               history={history}
               updateHistory={updateHistory}
+              castHis={castlingHistory}
+              updateCastHis={updateCastlingHistory}
               />)
           }
           return <div key={`row-${-i+73}`} id="chessRow">{rowOfCells}</div>;
@@ -794,6 +821,9 @@ function ChessBoard() {
       <br />
       {reactBoard}
       <br /><br />
+      <button id="undo-move" className="game-buttons" onClick={() => {
+        undoMove();
+      }}>Undo Move</button>
       <button id="start-game" className="game-buttons" onClick={() => {
         setActive(false);
         setPossibleMoves([]);
@@ -808,11 +838,12 @@ function ChessBoard() {
         setStalemate(false);
         setBoard(BoardType("default"));
         setHistory([BoardType("default")]);
+        setCastlingHistory([[], []]);
         setReactBoard(updateHTMLBoard());
       }}>Start Game!</button>
-      <button id="undo-move" className="game-buttons" onClick={() => {
-        undoMove();
-      }}>Undo Move</button>
+      <button id="resign" className="game-buttons" onClick={() => {
+        setCheckmate(whiteTurn ? "white" : "black");
+      }}>Resign</button>
     </>
   )
 }

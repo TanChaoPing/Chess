@@ -1,110 +1,80 @@
 import { useState, useEffect } from 'react';
 import './App.css';
 
-function defaultPiecePosition(alp, num) {
-  let piece;
-  switch (alp + "-" + num) {
-    // White Special Pieces
-    case "A-1":
-    case "A-8":
-      piece = "white-rook";
-      break;
-    case "A-2":
-    case "A-7":
-      piece = "white-knight";
-      break;
-    case "A-3":
-    case "A-6":
-      piece = "white-bishop";
-      break;
-    case "A-4":
-      piece = "white-queen";
-      break;
-    case "A-5":
-      piece = "white-king";
-      break;
-    
-    // White Pawns
-    case "B-1":
-    case "B-2":
-    case "B-3":
-    case "B-4":
-    case "B-5":
-    case "B-6":
-    case "B-7":
-    case "B-8":
-      piece = "white-pawn"
-      break;
-    
-    // Black Special Pieces
-    case "H-1":
-    case "H-8":
-      piece = "black-rook";
-      break;
-    case "H-2":
-    case "H-7":
-      piece = "black-knight";
-      break;
-    case "H-3":
-    case "H-6":
-      piece = "black-bishop";
-      break;
-    case "H-4":
-      piece = "black-queen";
-      break;
-    case "H-5":
-      piece = "black-king";
-      break;
-    
-    // White Pawns
-    case "G-1":
-    case "G-2":
-    case "G-3":
-    case "G-4":
-    case "G-5":
-    case "G-6":
-    case "G-7":
-    case "G-8":
-      piece = "black-pawn";
-      break;
-    
-    // Default
-    default:
-      piece = "";
-      break;
+function defaultPiecePosition(alp) { // Currying Function
+  if (alp == "B") {
+    return "white-pawn";
+  } else if (alp == "G") {
+    return "black-pawn";
+  } else {
+    return function(num) {
+      let piece;
+      switch (alp + "-" + num) {
+        // White Special Pieces
+        case "A-1":
+        case "A-8":
+          piece = "white-rook";
+          break;
+        case "A-2":
+        case "A-7":
+          piece = "white-knight";
+          break;
+        case "A-3":
+        case "A-6":
+          piece = "white-bishop";
+          break;
+        case "A-4":
+          piece = "white-queen";
+          break;
+        case "A-5":
+          piece = "white-king";
+          break;
+        
+        // Black Special Pieces
+        case "H-1":
+        case "H-8":
+          piece = "black-rook";
+          break;
+        case "H-2":
+        case "H-7":
+          piece = "black-knight";
+          break;
+        case "H-3":
+        case "H-6":
+          piece = "black-bishop";
+          break;
+        case "H-4":
+          piece = "black-queen";
+          break;
+        case "H-5":
+          piece = "black-king";
+          break;
+
+        // Default
+        default:
+          piece = "";
+          break;
+      }
+      return piece;
+    }
   }
-  return piece;
 }
 
 function checkDetection(color, board) {
   let opposingColor = (color == "white") ? "black" : "white";
-  let check = false;
   for (let i = 0; i < 8; i++) {
     for (let j = 0; j < 8; j++) {
       if (board[i][j].split("-")[0] == color) {
-        switch (board[i][j].split("-")[1]) {
-          case "pawn":
-            check = checkDetectionPawn(color, board, i, j);
-            break;
-          case "rook":
-            check = checkDetectionRook(opposingColor, board, i, j);
-            break;
-          case "knight":
-            check = checkDetectionKnight(opposingColor, board, i, j);
-            break;
-          case "bishop":
-            check = checkDetectionBishop(opposingColor, board, i, j);
-            break;
-          case "queen":
-            check = checkDetectionRook(opposingColor, board, i, j) || checkDetectionBishop(opposingColor, board, i, j);
-            break;
-          case "king":
-            check = checkDetectionKing(opposingColor, board, i, j);
-            break;
-          default:
-            break;
+        let funcArgs = [opposingColor, board, i, j];
+        let functionObj = { // Functions into Object
+          "pawn": checkDetectionPawn(color, board, i, j),
+          "rook": checkDetectionRook(funcArgs),
+          "knight": checkDetectionKnight(funcArgs),
+          "bishop": checkDetectionBishop(funcArgs),
+          "queen": checkDetectionRook(funcArgs) || checkDetectionBishop(funcArgs),
+          "king": checkDetectionKing(funcArgs) 
         }
-        if (check) return true;
+        if (functionObj[board[i][j].split("-")[1]]) return true;
       }
     }
   }
@@ -119,7 +89,8 @@ function checkDetectionPawn(color, board, c1, c2) {
   return false;
 }
 
-function checkDetectionRook(opposingColor, board, c1, c2) {
+function checkDetectionRook(funcArgs) {
+  let [opposingColor, board, c1, c2] = funcArgs;
   // Check Left
   for (let i = c2-1; i >= 0; i--) {
     if (board[c1][i] == `${opposingColor}-king`) return true;
@@ -143,7 +114,8 @@ function checkDetectionRook(opposingColor, board, c1, c2) {
   return false;
 }
 
-function checkDetectionKnight(opposingColor, board, c1, c2) {
+function checkDetectionKnight(funcArgs) {
+  let [opposingColor, board, c1, c2] = funcArgs;
   // Check all 8 knight cells
   let poss = [[c1-2, c1-1], [c1-2, c1+1], [c1-1, c2-2], [c1-1, c2+2], [c1+1, c2-2], [c1+1, c2+2], [c1+2, c1-1], [c1+2, c1+1]];
   for (let p of poss) {
@@ -154,7 +126,8 @@ function checkDetectionKnight(opposingColor, board, c1, c2) {
   return false;
 }
 
-function checkDetectionBishop(opposingColor, board, c1, c2) {
+function checkDetectionBishop(funcArgs) {
+  let [opposingColor, board, c1, c2] = funcArgs;
   for (let i = c1-1, j = c2-1; i >= 0, j >= 0; i--, j--) { // NW
     if (i < 0 || j < 0) break;
     if (board[i][j] == `${opposingColor}-king`) return true;
@@ -178,7 +151,8 @@ function checkDetectionBishop(opposingColor, board, c1, c2) {
   return false;
 }
 
-function checkDetectionKing(opposingColor, board, c1, c2) {
+function checkDetectionKing(funcArgs) {
+  let [opposingColor, board, c1, c2] = funcArgs;
   for (let i = c1-1; i < c1+2; i++) {
     for (let j = c2-1; j < c2+2; j++) {
       if ((c1 == i && c2 == j) || i < 0 || i > 7 || j < 0 || j > 7) continue;
@@ -345,7 +319,7 @@ function Cell(props) {
           }
 
           // Castling
-          if (pc_color == "white" && coords[0] == 65 && !props.whiteKingMoved) {
+          if (pc_color == "white" && coords[0] == 65 && !props.whiteKingMoved && props.checked != "white") {
             if (curBoard[7][7] == "white-rook" && curBoard[7][6] == "" && curBoard[7][5] == "●") { // King Side
               editBoardNPoss(curBoard, possibleMoves, 7, 6);
             }
@@ -354,7 +328,7 @@ function Cell(props) {
             }
           }
 
-          if (pc_color == "black" && coords[0] == 72 && !props.blackKingMoved) {
+          if (pc_color == "black" && coords[0] == 72 && !props.blackKingMoved && props.checked != "black") {
             if (curBoard[0][0] == "black-rook" && curBoard[0][1] == "" && curBoard[0][2] == "" && curBoard[0][3] == "●") { // King Side
               editBoardNPoss(curBoard, possibleMoves, 0, 2);
             }
@@ -388,6 +362,12 @@ function Cell(props) {
         if (pc_type == "pawn") {
           for (let i = 0; i < 8; i++) {
             if (checkBoard[i][coords[1]-1] == "●") checkBoard[i][coords[1]-1] = "";
+          }
+        }
+
+        for (let i = 0; i < 8; i++) {
+          for (let j = 0; j < 8; j++) {
+            if (checkBoard[i][j] == "●") checkBoard[i][j] = "";
           }
         }
 
@@ -685,7 +665,12 @@ function BoardType(type) {
   if (type == "default") {
     for (let i = 72; i >= 65; i--) {
       for (let j = 1; j <= 8; j++) {
-        board[-1*i+72][j-1] = defaultPiecePosition(String.fromCharCode(i), j);
+        let rowAlp = String.fromCharCode(i);
+        if (rowAlp == "B" || rowAlp == "G") {
+          board[-1*i+72][j-1] = defaultPiecePosition(rowAlp);
+          continue;
+        }
+        board[-1*i+72][j-1] = defaultPiecePosition(rowAlp)(j);
       }
     }
   }

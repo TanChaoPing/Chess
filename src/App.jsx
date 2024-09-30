@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext, createContext } from 'react';
 import './App.css';
+
+const BoardContext = createContext(null);
 
 function defaultPiecePosition(alp) { // Currying Function
   if (alp == "B") {
@@ -117,7 +119,7 @@ function checkDetectionRook(funcArgs) {
 function checkDetectionKnight(funcArgs) {
   let [opposingColor, board, c1, c2] = funcArgs;
   // Check all 8 knight cells
-  let poss = [[c1-2, c1-1], [c1-2, c1+1], [c1-1, c2-2], [c1-1, c2+2], [c1+1, c2-2], [c1+1, c2+2], [c1+2, c1-1], [c1+2, c1+1]];
+  let poss = [[c1-2, c2-1], [c1-2, c2+1], [c1-1, c2-2], [c1-1, c2+2], [c1+1, c2-2], [c1+1, c2+2], [c1+2, c1-1], [c1+2, c1+1]];
   for (let p of poss) {
     if (p[0] >= 0 && p[0] < 8 && p[1] >= 0 && p[1] < 8) {
       if (board[p[0]][p[1]] == `${opposingColor}-king`) return true;
@@ -128,23 +130,19 @@ function checkDetectionKnight(funcArgs) {
 
 function checkDetectionBishop(funcArgs) {
   let [opposingColor, board, c1, c2] = funcArgs;
-  for (let i = c1-1, j = c2-1; i >= 0, j >= 0; i--, j--) { // NW
-    if (i < 0 || j < 0) break;
+  for (let i = c1-1, j = c2-1; i >= 0 && j >= 0; i--, j--) { // NW
     if (board[i][j] == `${opposingColor}-king`) return true;
     if (board[i][j] != "") break;
   }
-  for (let i = c1-1, j = c2+1; i >= 0, j < 8; i--, j++) { // NE
-    if (i < 0 || j > 7) break;
+  for (let i = c1-1, j = c2+1; i >= 0 && j < 8; i--, j++) { // NE
     if (board[i][j] == `${opposingColor}-king`) return true;
     if (board[i][j] != "") break;
   }
-  for (let i = c1+1, j = c2-1; i < 8, j >= 0; i++, j--) { // SW
-    if (i > 7 || j < 0) break;
+  for (let i = c1+1, j = c2-1; i < 8 && j >= 0; i++, j--) { // SW
     if (board[i][j] == `${opposingColor}-king`) return true;
     if (board[i][j] != "") break;
   }
-  for (let i = c1+1, j = c2+1; i < 8, j < 8; i++, j++) { // SE
-    if (i > 7 || j > 7) break;
+  for (let i = c1+1, j = c2+1; i < 8 && j < 8; i++, j++) { // SE
     if (board[i][j] == `${opposingColor}-king`) return true;
     if (board[i][j] != "") break;
   }
@@ -168,13 +166,12 @@ function checkDraw(whiteCount, blackCount) {
 }
 
 function Cell(props) {
-  // Props: board, updateBoard, activeStatus, updateActiveStatus, poss, updatePossibleMoves, prev, updatePrev,
-  // turn, updateTurn, target, updateTarget, promote, updatePromote, history, updateHistory, checked, updateChecked
+  const {board, updateBoard, activeStatus, updateActiveStatus, poss, updatePossibleMoves, prev, updatePrev, turn, updateTurn, whiteKingMoved, updateWhiteKingMoved, blackKingMoved, updateBlackKingMoved, target, updateTarget, updatePromotion, checked, updateChecked, checkmate, updateCheckmate, history, updateHistory, castHis, updateCastHis} = useContext(BoardContext);
 
   let bgColor = (props.alp + props.num) % 2 === 0 ? "#C4A484" : "white";
   const coordinate = [props.alp, props.num] // coordinate[0] is H-A, coordinate[1] is 1-8
 
-  if (props.target[72-coordinate[0]][coordinate[1]-1]) bgColor = "pink";
+  if (target[72-coordinate[0]][coordinate[1]-1]) bgColor = "pink";
 
   const [value, setValue] = useState(props.pc)
   
@@ -185,20 +182,20 @@ function Cell(props) {
   function handleCellClick(activeStat) {
     let skipActive = false;
     (!activeStat) ? skipActive = showPieceMoves(false, value, coordinate) : deactivateOrMove();
-    if (!skipActive) props.updateActiveStatus(!activeStat)
+    if (!skipActive) updateActiveStatus(!activeStat)
   }  
   
   function checkPieceExistOnCell(val, c1, c2, targetedCells) {
-    if (props.board[c1][c2] != "") {
+    if (board[c1][c2] != "") {
       // If different colors
-      if (val.split("-")[0] != props.board[c1][c2].split("-")[0] && val.split("-")[1] != "pawn") targetedCells[c1][c2] = true;
+      if (val.split("-")[0] != board[c1][c2].split("-")[0] && val.split("-")[1] != "pawn") targetedCells[c1][c2] = true;
       return true;
     }
     return false;
   }
 
   function checkPawnAttack(val, c1, c2, targetedCells) {
-    let curBoard = props.board;
+    let curBoard = board;
     if (val.split("-")[0] == "white") {
       if (c1-1 >= 0 && c2-1 >= 0 && curBoard[c1-1][c2-1] != "" && curBoard[c1-1][c2-1].split("-")[0] == "black") targetedCells[c1-1][c2-1] = true;
       if (c1-1 >= 0 && c2+1 < 8 && curBoard[c1-1][c2+1] != "" && curBoard[c1-1][c2+1].split("-")[0] == "black") targetedCells[c1-1][c2+1] = true;
@@ -235,11 +232,11 @@ function Cell(props) {
   function showPieceMoves(stop, val, coordinateArg) {
     let [pc_color, pc_type] = val.split("-");
     let coords = coordinateArg;
-    let curBoard = structuredClone(props.board);
+    let curBoard = structuredClone(board);
     let possibleMoves = [];
-    let targetedCells = structuredClone(props.target);
+    let targetedCells = structuredClone(target);
     if (stop == false) {
-      if ((props.turn == true && pc_color == "black") || (props.turn == false && pc_color == "white")) return true;
+      if ((turn == true && pc_color == "black") || (turn == false && pc_color == "white")) return true;
     }
     
     while (pc_type == "pawn" && pc_color == "white") {
@@ -319,7 +316,7 @@ function Cell(props) {
           }
 
           // Castling
-          if (pc_color == "white" && coords[0] == 65 && !props.whiteKingMoved && props.checked != "white") {
+          if (pc_color == "white" && coords[0] == 65 && !whiteKingMoved && checked != "white") {
             if (curBoard[7][7] == "white-rook" && curBoard[7][6] == "" && curBoard[7][5] == "●") { // King Side
               editBoardNPoss(curBoard, possibleMoves, 7, 6);
             }
@@ -328,7 +325,7 @@ function Cell(props) {
             }
           }
 
-          if (pc_color == "black" && coords[0] == 72 && !props.blackKingMoved && props.checked != "black") {
+          if (pc_color == "black" && coords[0] == 72 && !blackKingMoved && checked != "black") {
             if (curBoard[0][0] == "black-rook" && curBoard[0][1] == "" && curBoard[0][2] == "" && curBoard[0][3] == "●") { // King Side
               editBoardNPoss(curBoard, possibleMoves, 0, 2);
             }
@@ -350,7 +347,7 @@ function Cell(props) {
     }
 
     // If checked, limit the possible moves.
-    if (props.checked == pc_color) {
+    if (checked == pc_color) {
       let opposingColor = (pc_color == "white") ? "black" : "white";
       let newPossibleMoves = [];
       for (let p of possibleMoves) {
@@ -389,6 +386,12 @@ function Cell(props) {
         checkBoard[p[0]][p[1]] = val;
         checkBoard[72-coords[0]][coords[1]-1] = "";
         
+        for (let i = 0; i < 8; i++) {
+          for (let j = 0; j < 8; j++) {
+            if (checkBoard[i][j] == "●") checkBoard[i][j] = "";
+          }
+        }
+        
         if (checkDetection(opposingColor, checkBoard)) {
           if (curBoard[p[0]][p[1]] == "●") curBoard[p[0]][p[1]] = "";
           targetedCells[p[0]][p[1]] = false;
@@ -419,16 +422,16 @@ function Cell(props) {
       return noMoves;
     }
 
-    props.updatePossibleMoves(possibleMoves);
-    props.updateTarget(targetedCells);
-    props.updateBoard(curBoard);
+    updatePossibleMoves(possibleMoves);
+    updateTarget(targetedCells);
+    updateBoard(curBoard);
     if (possibleMoves.length == 0) return true;
     return false;
   }
 
   function deactivateOrMove() {
     let selectMove = false;
-    let possMoves = props.poss;
+    let possMoves = poss;
 
     // Check if user click on cells with ● (Move)
     for (let coord of possMoves) {
@@ -439,18 +442,18 @@ function Cell(props) {
     }
 
     if (selectMove) { // Move the piece
-      let newBoard = [...props.board];
+      let newBoard = [...board];
       
-      for (let coord of props.poss) if (newBoard[coord[0]][coord[1]] == "●") newBoard[coord[0]][coord[1]] = "";
-      newBoard[72 - coordinate[0]][coordinate[1] - 1] = props.prev[2];
-      newBoard[props.prev[0]][props.prev[1]] = "";
+      for (let coord of poss) if (newBoard[coord[0]][coord[1]] == "●") newBoard[coord[0]][coord[1]] = "";
+      newBoard[72 - coordinate[0]][coordinate[1] - 1] = prev[2];
+      newBoard[prev[0]][prev[1]] = "";
 
-      let tempVal = props.prev[2].split("-")
+      let tempVal = prev[2].split("-")
 
       // King Move & Castling Move
-      let global_king_moved = [false || props.whiteKingMoved, false || props.blackKingMoved];
+      let global_king_moved = [false || whiteKingMoved, false || blackKingMoved];
       if (tempVal[0] == "white" && tempVal[1] == "king") {
-        if (!props.whiteKingMoved) {
+        if (!whiteKingMoved) {
           if (72-coordinate[0] == 7 && coordinate[1]-1 == 6) { // White King Side
             newBoard[7][7] = "";
             newBoard[7][5] = "white-rook";
@@ -461,10 +464,10 @@ function Cell(props) {
           }
         }
         global_king_moved[0] = true; 
-        props.updateWhiteKingMoved(true);
+        updateWhiteKingMoved(true);
       }
       if (tempVal[0] == "black" && tempVal[1] == "king") {
-        if (!props.blackKingMoved) {
+        if (!blackKingMoved) {
           if (72-coordinate[0] == 0 && coordinate[1]-1 == 6) { // Black King Side
             newBoard[0][7] = "";
             newBoard[0][5] = "black-rook";
@@ -475,20 +478,20 @@ function Cell(props) {
           }
         }
         global_king_moved[1] = true;
-        props.updateBlackKingMoved(true);
+        updateBlackKingMoved(true);
       }
 
       // Promotion Detection
       if (tempVal[1] == "pawn") {
         if (tempVal[0] == "white" && 72-coordinate[0] == 0) {
-          props.updatePromotion([true, "white", 72-coordinate[0], coordinate[1]-1]);
+          updatePromotion([true, "white", 72-coordinate[0], coordinate[1]-1]);
         }
         if (tempVal[0] == "black" && 72-coordinate[0] == 7) {
-          props.updatePromotion([true, "black", 72-coordinate[0], coordinate[1]-1]);
+          updatePromotion([true, "black", 72-coordinate[0], coordinate[1]-1]);
         }
       }
 
-      let inactiveTarget = props.target;
+      let inactiveTarget = target;
       let whiteCount = 0, blackCount = 0;
       for (let i = 0; i < 8; i++) {
         for (let j = 0; j < 8; j++) {
@@ -507,7 +510,7 @@ function Cell(props) {
 
       // Check Draw
       if (checkDraw(whiteCount, blackCount)) {
-        props.updateDraw(true);
+        updateDraw(true);
       }
       
       // New History Entry
@@ -517,53 +520,53 @@ function Cell(props) {
       let pieceColor = newBoard[72-coordinate[0]][coordinate[1]-1].split("-")[0];
       let opposingColor = pieceColor == "white" ? "black" : "white";
       if (checkDetection(pieceColor, [...newBoard])) {
-        props.updateChecked(opposingColor);
+        updateChecked(opposingColor);
         
         // Check checkmate & Undo need to reset color
         if (availableMoves(newBoard, opposingColor)) {
-          props.updateCheckmate(true);
+          updateCheckmate(true);
           return;
         }
       } else {
-        props.updateChecked(null);
+        updateChecked(null);
       }
 
       // Stalemate Detection
-      if (availableMoves(newBoard, opposingColor)) props.updateStalemate(true);
+      if (availableMoves(newBoard, opposingColor)) updateStalemate(true);
 
       // History + Stuff Update 
-      let newHistory = props.history.map(arr => [...arr]);
+      let newHistory = history.map(arr => [...arr]);
       newHistory.push(newHistoryEntry);
-      props.updateHistory(newHistory);
+      updateHistory(newHistory);
 
-      let newCastlingHistory = structuredClone(props.castHis);
-      if (props.turn) {
+      let newCastlingHistory = structuredClone(castHis);
+      if (turn) {
         newCastlingHistory[0].push(global_king_moved[0]);
       } else {
         newCastlingHistory[1].push(global_king_moved[1]);
       }
-      props.updateCastHis(newCastlingHistory);
+      updateCastHis(newCastlingHistory);
 
-      props.updateTarget(inactiveTarget);
-      props.updateBoard(newBoard);
-      props.updateTurn(!props.turn);
+      updateTarget(inactiveTarget);
+      updateBoard(newBoard);
+      updateTurn(!turn);
 
       return; 
     }
 
     // Deactivate
-    let inactiveBoard = props.board;
-    for (let coord of props.poss) if (inactiveBoard[coord[0]][coord[1]] == "●") inactiveBoard[coord[0]][coord[1]] = "";
+    let inactiveBoard = board;
+    for (let coord of poss) if (inactiveBoard[coord[0]][coord[1]] == "●") inactiveBoard[coord[0]][coord[1]] = "";
 
-    let inactiveTarget = props.target;
+    let inactiveTarget = target;
     for (let i = 0; i < 8; i++) {
       for (let j = 0; j < 8; j++) {
         inactiveTarget[i][j] = false;
       }
     }
 
-    props.updateTarget(inactiveTarget);
-    props.updateBoard(inactiveBoard);
+    updateTarget(inactiveTarget);
+    updateBoard(inactiveBoard);
   }
 
   function availableMoves(newBoard, opposingColor) {
@@ -586,10 +589,10 @@ function Cell(props) {
     <button
       className="chess-cell"
       id={`${String.fromCharCode(props.alp)}-${props.num}`}
-      style={{backgroundColor: `${bgColor}`, disabled: `${props.checkmate}`}}
+      style={{backgroundColor: `${bgColor}`, disabled: `${checkmate}`}}
       onClick={() => {
-        handleCellClick(props.activeStatus)
-        props.updatePrev([72 - coordinate[0], coordinate[1] - 1, value])
+        handleCellClick(activeStatus)
+        updatePrev([72 - coordinate[0], coordinate[1] - 1, value])
         } 
       }>
       {(value != "" && value != "●") ? <img src={`/${value}.png`} width="60px" height="60px" /> : value}
@@ -597,26 +600,29 @@ function Cell(props) {
   )
 }
 
-function PopupPromotionModal(props) {
-  let newBoard = props.board;
+function PopupPromotionModal() {
+  const {promote, board, updateBoard, updatePromotion} = useContext(BoardContext);
+  let [showModal, color, c1, c2] = promote;
+
+  let newBoard = structuredClone(board);
   
   function promotion(piece) {
-    newBoard[props.c0][props.c1] = `${props.color}-${piece}`;
-    props.updateBoard(newBoard);
-    props.updatePromotion([false, null, null, null]);
+    newBoard[c1][c2] = `${color}-${piece}`;
+    updateBoard(newBoard);
+    updatePromotion([false, null, null, null]);
   }
 
   return (
     <>
-      { props.showModal &&
+      { showModal &&
         <div id="popup-bg">
           <div id="popup-modal">
             <h1>Promotion!</h1>
             <p>Which piece do you want to promote the pawn to?</p>
-            <button className="promotion-choice" onClick={() => {promotion("queen")}}><img src={`/${props.color}-queen.png`} /></button>
-            <button className="promotion-choice" onClick={() => {promotion("knight")}}><img src={`/${props.color}-knight.png`} /></button>
-            <button className="promotion-choice" onClick={() => {promotion("rook")}}><img src={`/${props.color}-rook.png`} /></button>
-            <button className="promotion-choice" onClick={() => {promotion("bishop")}}><img src={`/${props.color}-bishop.png`} /></button>
+            <button className="promotion-choice" onClick={() => {promotion("queen")}}><img src={`/${color}-queen.png`} /></button>
+            <button className="promotion-choice" onClick={() => {promotion("knight")}}><img src={`/${color}-knight.png`} /></button>
+            <button className="promotion-choice" onClick={() => {promotion("rook")}}><img src={`/${color}-rook.png`} /></button>
+            <button className="promotion-choice" onClick={() => {promotion("bishop")}}><img src={`/${color}-bishop.png`} /></button>
           </div>
         </div>
       }
@@ -624,30 +630,32 @@ function PopupPromotionModal(props) {
   )
 }
 
-function WinnerWindow(props) {
-  let winColor = props.winnerColor ? "White" : "Black";
-  let modalText;
-  if (props.checkmate) {
+function WinnerWindow() {
+  const {turn, checkmate, draw, stalemate, updateCheckmate, updateDraw, updateStalemate} = useContext(BoardContext);
+  let winColor = turn ? "White" : "Black";
+  let showModal = checkmate || draw || stalemate, modalText;
+
+  if (checkmate) {
     modalText = `Congratulations! ${winColor} has won the game!`;
   }
-  if (props.draw) {
+  if (draw) {
     modalText = `The game has ended in a draw!`;
   }
-  if (props.stalemate) {
+  if (stalemate) {
     modalText = `The game has ended in a stalemate!`;
   }
 
   return (
     <>
     {
-      props.showModal &&
+      showModal &&
       <div id="winner-bg">
         <div id="winner-modal">
           <h2 id="winner-text">{modalText}</h2>
           <button className="game-buttons" onClick={() => {
-            props.updateCheckmate(false);
-            props.updateDraw(false);
-            props.updateStalemate(false);
+            updateCheckmate(false);
+            updateDraw(false);
+            updateStalemate(false);
           }}>Close Window</button>
         </div>
       </div>
@@ -709,6 +717,24 @@ function ChessBoard() {
     setReactBoard(updateHTMLBoard())
   }, [board, history, targeted, promote, checkmate])
 
+  function resetGame() {
+    setActive(false);
+    setPossibleMoves([]);
+    setPrevSelected([]);
+    setWhiteTurn(true);
+    setWhiteKingMoved(false);
+    setBlackKingMoved(false);
+    setTargeted(defaultTargeted());
+    setChecked(null);
+    setCheckmate(false);
+    setDraw(false);
+    setStalemate(false);
+    setBoard(BoardType("default"));
+    setHistory([BoardType("default")]);
+    setCastlingHistory([[], []]);
+    setReactBoard(updateHTMLBoard());
+  }
+
   function undoMove() {
     if (history.length != 1) {
       let newBoard = structuredClone(history[history.length-2]);
@@ -749,6 +775,39 @@ function ChessBoard() {
   function updateCastlingHistory(hist) {setCastlingHistory([...hist])}
   function updateTargets(newTargets) {setTargeted([...newTargets])}
   
+  const boardProps = {
+    board: board,
+    updateBoard: updateArrayBoard,
+    activeStatus: active,
+    updateActiveStatus: updateActive,
+    poss: possibleMoves,
+    updatePossibleMoves: updatePossibleMoves,
+    prev: prevSelected,
+    updatePrev: updatePrevSelected,
+    turn: whiteTurn,
+    updateTurn: updateTurn,
+    whiteKingMoved: whiteKingMoved,
+    updateWhiteKingMoved: updateWhiteKingMoved,
+    blackKingMoved: blackKingMoved,
+    updateBlackKingMoved: updateBlackKingMoved,
+    target: targeted,
+    updateTarget: updateTargets,
+    promote: promote,
+    updatePromotion: updatePromote,
+    checked: checked,
+    updateChecked: updateChecked,
+    checkmate: checkmate,
+    updateCheckmate: updateCheckmate,
+    draw: draw,
+    updateDraw: updateDraw,
+    stalemate: stalemate,
+    updateStalemate: updateStalemate,
+    history: history,
+    updateHistory: updateHistory,
+    castHis: castlingHistory,
+    updateCastHis: updateCastlingHistory
+  }
+
   function updateHTMLBoard() {
     let HTML_Board = [];
     for (let i = 72; i >= 65; i--) {
@@ -756,35 +815,7 @@ function ChessBoard() {
         function() {
           let rowOfCells = [];
           for (let j = 1; j <= 8; j++) {
-            rowOfCells.push(
-              <Cell alp={i} num={j} pc={board[-i+72][j-1]} 
-              board={board} updateBoard={updateArrayBoard} 
-              activeStatus={active} 
-              updateActiveStatus={updateActive} 
-              poss={possibleMoves}
-              updatePossibleMoves={updatePossibleMoves}
-              prev={prevSelected}
-              updatePrev={updatePrevSelected}
-              turn={whiteTurn}
-              updateTurn={updateTurn}
-              whiteKingMoved={whiteKingMoved}
-              updateWhiteKingMoved={updateWhiteKingMoved}
-              blackKingMoved={blackKingMoved}
-              updateBlackKingMoved={updateBlackKingMoved}
-              target={targeted}
-              updateTarget={updateTargets}
-              updatePromotion={updatePromote}
-              checked={checked}
-              updateChecked={updateChecked}
-              checkmate={checkmate}
-              updateCheckmate={updateCheckmate}
-              updateDraw={updateDraw}
-              updateStalemate={updateStalemate}
-              history={history}
-              updateHistory={updateHistory}
-              castHis={castlingHistory}
-              updateCastHis={updateCastlingHistory}
-              />)
+            rowOfCells.push( <Cell alp={i} num={j} pc={board[-i+72][j-1]} />)
           }
           return <div key={`row-${-i+73}`} id="chessRow">{rowOfCells}</div>;
         }()
@@ -795,39 +826,27 @@ function ChessBoard() {
 
   return (
     <>
-      <WinnerWindow showModal={checkmate || draw || stalemate} checkmate={checkmate} draw={draw} stalemate={stalemate} winnerColor={!whiteTurn} updateCheckmate={updateCheckmate} updateDraw={updateDraw} updateStalemate={updateStalemate}/>
-      <PopupPromotionModal showModal={promote[0]} color={promote[1]} c0={promote[2]} c1={promote[3]} board={board} updateBoard={updateArrayBoard} updatePromotion={updatePromote}/>
-      <img src="/chess-logo.png" width="235px" height="200px"/>
-      <hr id="line"></hr> <br />
-      <div id="turn-container">
-        <h2 id="turn-display">{whiteTurn ? "White" : "Black"}'s turn to move!</h2>
-      </div>
-      <br />
-      {reactBoard}
-      <br /><br />
-      <button id="undo-move" className="game-buttons" onClick={() => {
-        undoMove();
-      }}>Undo Move</button>
-      <button id="start-game" className="game-buttons" onClick={() => {
-        setActive(false);
-        setPossibleMoves([]);
-        setPrevSelected([]);
-        setWhiteTurn(true);
-        setWhiteKingMoved(false);
-        setBlackKingMoved(false);
-        setTargeted(defaultTargeted());
-        setChecked(null);
-        setCheckmate(false);
-        setDraw(false);
-        setStalemate(false);
-        setBoard(BoardType("default"));
-        setHistory([BoardType("default")]);
-        setCastlingHistory([[], []]);
-        setReactBoard(updateHTMLBoard());
-      }}>Start Game!</button>
-      <button id="resign" className="game-buttons" onClick={() => {
-        setCheckmate(whiteTurn ? "white" : "black");
-      }}>Resign</button>
+      <BoardContext.Provider value={boardProps}>
+        <WinnerWindow />
+        <PopupPromotionModal />
+        <img src="/chess-logo.png" width="235px" height="200px"/>
+        <hr id="line"></hr> <br />
+        <div id="turn-container">
+          <h2 id="turn-display">{whiteTurn ? "White" : "Black"}'s turn to move!</h2>
+        </div>
+        <br />
+        {reactBoard}
+        <br /><br />
+        <button id="undo-move" className="game-buttons" onClick={() => {
+          undoMove();
+        }}>Undo Move</button>
+        <button id="start-game" className="game-buttons" onClick={() => {
+          resetGame();
+        }}>Start Game!</button>
+        <button id="resign" className="game-buttons" onClick={() => {
+          setCheckmate(whiteTurn ? "white" : "black");
+        }}>Resign</button>
+      </BoardContext.Provider>
     </>
   )
 }

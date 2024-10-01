@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext, createContext } from 'react';
+import { useState, useEffect, useContext, useRef, createContext } from 'react';
 import './App.css';
 
 const BoardContext = createContext(null);
@@ -656,7 +656,7 @@ function WinnerWindow() {
             updateCheckmate(false);
             updateDraw(false);
             updateStalemate(false);
-          }}>Close Window</button>
+          }}>Close</button>
         </div>
       </div>
     }
@@ -713,9 +713,21 @@ function ChessBoard() {
   const [board, setBoard] = useState(BoardType("empty"));
   const [reactBoard, setReactBoard] = useState(updateHTMLBoard());
 
+  const turnRef = useRef(null);
+
   useEffect(() => {
     setReactBoard(updateHTMLBoard())
   }, [board, history, targeted, promote, checkmate])
+
+  useEffect(() => {
+    if (whiteTurn) {
+      turnRef.current.style.backgroundColor = "white";
+      turnRef.current.style.color = "black";
+    } else {
+      turnRef.current.style.backgroundColor = "black";
+      turnRef.current.style.color = "white";
+    }
+  }, [whiteTurn])
 
   function resetGame() {
     setActive(false);
@@ -759,7 +771,7 @@ function ChessBoard() {
     }
   }
 
-  function updateTurn(turn) {setWhiteTurn(turn)}
+  function updateTurn(turn) {setWhiteTurn(turn);}
   function updateWhiteKingMoved(status) {setWhiteKingMoved(status)}
   function updateBlackKingMoved(status) {setBlackKingMoved(status)}
   function updatePrevSelected(prevCell) {setPrevSelected(prevCell)}
@@ -829,23 +841,33 @@ function ChessBoard() {
       <BoardContext.Provider value={boardProps}>
         <WinnerWindow />
         <PopupPromotionModal />
-        <img src="/chess-logo.png" width="235px" height="200px"/>
+        
+        <img id="chess-logo" src="/chess-logo.png" width="235px" height="200px"/>
         <hr id="line"></hr> <br />
-        <div id="turn-container">
+
+        <div id="turn-container" ref={turnRef}>
           <h2 id="turn-display">{whiteTurn ? "White" : "Black"}'s turn to move!</h2>
         </div>
         <br />
-        {reactBoard}
+
+        <div class="select-buttons">
+          <button id="undo-move" className="game-buttons" onClick={() => {
+            undoMove();
+          }}>Undo Move</button>
+          <button id="start-game" className="game-buttons" onClick={() => {
+            resetGame();
+          }}>Start Game!</button>
+          <button id="resign" className="game-buttons" onClick={() => {
+            setCheckmate(whiteTurn ? "white" : "black");
+          }}>Resign</button>
+        </div>
+
+        <div class="chess-board">
+          {reactBoard}
+        </div>
+        
         <br /><br />
-        <button id="undo-move" className="game-buttons" onClick={() => {
-          undoMove();
-        }}>Undo Move</button>
-        <button id="start-game" className="game-buttons" onClick={() => {
-          resetGame();
-        }}>Start Game!</button>
-        <button id="resign" className="game-buttons" onClick={() => {
-          setCheckmate(whiteTurn ? "white" : "black");
-        }}>Resign</button>
+        
       </BoardContext.Provider>
     </>
   )
@@ -853,9 +875,12 @@ function ChessBoard() {
 
 function GamePage() {
   return (
-    <div>
+    <>
       <ChessBoard />
-    </div>
+      <br />
+      <hr id="line"></hr>
+      <p id="credits">Made by: Tan Chao Ping</p>
+    </>
   )
 }
 
